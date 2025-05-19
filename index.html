@@ -1,46 +1,173 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Список игр</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    header { margin-bottom: 20px; }
+    .game {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 10px;
+    }
+    .game img { width: 120px; margin-right: 15px; }
+    .info a { font-weight: bold; text-decoration: none; }
+    .info { display: flex; flex-direction: column; }
+    .sort-options { margin-bottom: 10px; }
+    select, button { margin-right: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="sort-options">
+      <label for="sort">Сортировать по: </label>
+      <select id="sort">
+        <option value="rateCount">Кол-во отзывов</option>
+        <option value="price">Цене</option>
+        <option value="rate">Качеству отзыва</option>
+      </select>
 
-    <title>Cocos Creator | TapclapTest</title>
+      <label>Мин. качество отзыва (%):</label>
+      <input type="number" id="minRate" value="0" min="0" max="100" style="width: 60px;">
 
-    <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1,minimum-scale=1,maximum-scale=1,minimal-ui=true"/>
-    <meta name="apple-mobile-web-app-capable" content="yes"/>
-    <meta name="full-screen" content="yes"/>
-    <meta name="screen-orientation" content="portrait"/>
-    <meta name="x5-fullscreen" content="true"/>
-    <meta name="360-fullscreen" content="true"/>
-    
-    <meta name="renderer" content="webkit"/>
-    <meta name="force-rendering" content="webkit"/>
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
-    
-    <link rel="stylesheet" type="text/css" href="style.css"/>
-    <link rel="icon" href="favicon.ico"/>
-  </head>
-  <body>
-    <h1 class="header">TapclapTest</h1>
+      <label>Мин. кол-во отзывов:</label>
+      <input type="number" id="minRateCount" value="0" min="0" style="width: 100px;">
 
-    <div id="GameDiv" cc_exact_fit_screen="false" style="width: 960px; height: 640px;">
-      <div id="Cocos3dGameContainer">
-        <canvas id="GameCanvas" width="960" height="640" tabindex="99"></canvas>
-      </div>
+      <label>Макс. цена (Евр):</label>
+      <input type="number" id="maxPrice" value="" min="0" style="width: 80px;">
+
+      <button id="customBtn">Random Game</button>
     </div>
-    <p class="footer">
-      Created with <a href="https://www.cocos.com/products" title="Cocos Creator">Cocos Creator</a>
-    </p>
-    <!-- Polyfills bundle. -->
-<script src="src/polyfills.bundle.js" charset="utf-8"> </script>
+  </header>
 
-<!-- SystemJS support. -->
-<script src="src/system.bundle.js" charset="utf-8"> </script>
+  <main id="gameList"></main>
 
-<!-- Import map -->
-<script src="src/import-map.json" type="systemjs-importmap" charset="utf-8"> </script>
+  <script>
+    let games = [];
+    let alreadyShown = [];
+    fetch('games.json')
+      .then(response => response.json())
+      .then(data => {
+        games = data;
+        renderGames();
+      })
+      .catch(error => {
+        console.error('Ошибка загрузки JSON:', error);
+      });
 
-<script>
-    System.import('./index.js').catch(function(err) { console.error(err); })
-</script>
-  </body>
+    document.getElementById('sort').addEventListener('change', renderGames);
+    document.getElementById('minRate').addEventListener('input', renderGames);
+    document.getElementById('minRateCount').addEventListener('input', renderGames);
+    document.getElementById('maxPrice').addEventListener('input', renderGames);
+    document.getElementById('customBtn').addEventListener('click', showRandomGame);
+
+
+function showRandomGame() {
+  const minRate = parseFloat(document.getElementById('minRate').value) || 0;
+  const minRateCount = parseInt(document.getElementById('minRateCount').value) || 0;
+  const maxPrice = parseFloat(document.getElementById('maxPrice').value);
+
+  const filtered = games.filter(game =>
+    game.rate >= minRate &&
+    game.rateCount >= minRateCount &&
+    (isNaN(maxPrice) || game.price <= maxPrice)
+  );
+
+  const available = filtered.filter(game => !alreadyShown.includes(game.url));
+
+  if (available.length === 0) {
+    alert("Все подходящие игры уже были показаны!");
+    alreadyShown = [];
+    return;
+  }
+
+  const randomGame = available[Math.floor(Math.random() * available.length)];
+  alreadyShown.push(randomGame.url);
+
+  const container = document.getElementById('gameList');
+  container.innerHTML = ''; // очищаем список
+
+  const div = document.createElement('div');
+  div.className = 'game';
+
+  const img = document.createElement('img');
+  img.src = randomGame.imgURL.split(',')[0].split(' ')[0];
+
+  const info = document.createElement('div');
+  info.className = 'info';
+
+  const link = document.createElement('a');
+  link.href = randomGame.url;
+  link.textContent = randomGame.gameName;
+  link.target = '_blank';
+
+  const price = document.createElement('div');
+  price.textContent = `Цена: $${randomGame.price}`;
+
+  const rating = document.createElement('div');
+  rating.textContent = `Отзывы: ${randomGame.rate}% из ${randomGame.rateCount.toLocaleString()}`;
+
+  info.appendChild(link);
+  info.appendChild(price);
+  info.appendChild(rating);
+
+  div.appendChild(img);
+  div.appendChild(info);
+  container.appendChild(div);
+}
+
+
+
+function renderGames() {
+  const sortBy = document.getElementById('sort').value;
+  const minRate = parseFloat(document.getElementById('minRate').value) || 0;
+  const minRateCount = parseInt(document.getElementById('minRateCount').value) || 0;
+  const maxPrice = parseFloat(document.getElementById('maxPrice').value);
+
+  const filtered = games.filter(game =>
+    game.rate >= minRate &&
+    game.rateCount >= minRateCount &&
+    (isNaN(maxPrice) || game.price <= maxPrice)
+  );
+
+  const sorted = filtered.sort((a, b) => b[sortBy] - a[sortBy]);
+
+  const container = document.getElementById('gameList');
+  container.innerHTML = '';
+  sorted.forEach(game => {
+    const div = document.createElement('div');
+    div.className = 'game';
+
+    const img = document.createElement('img');
+    img.src = game.imgURL.split(',')[0].split(' ')[0]; // берем 1x
+
+    const info = document.createElement('div');
+    info.className = 'info';
+
+    const link = document.createElement('a');
+    link.href = game.url;
+    link.textContent = game.gameName;
+    link.target = '_blank';
+
+    const price = document.createElement('div');
+    price.textContent = `Цена: $${game.price}`;
+
+    const rating = document.createElement('div');
+    rating.textContent = `Отзывы: ${game.rate}% из ${game.rateCount.toLocaleString()}`;
+
+    info.appendChild(link);
+    info.appendChild(price);
+    info.appendChild(rating);
+
+    div.appendChild(img);
+    div.appendChild(info);
+
+    container.appendChild(div);
+  });
+}
+  </script>
+</body>
 </html>
