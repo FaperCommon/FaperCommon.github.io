@@ -39,6 +39,10 @@
       <label>Макс. цена (Евр):</label>
       <input type="number" id="maxPrice" value="" min="0" style="width: 80px;">
 
+      <label>
+         <input type="checkbox" id="releasedOnly"> Только релизнутые
+      </label>
+
       <button id="customBtn">Random Game</button>
     </div>
   </header>
@@ -126,8 +130,10 @@ function renderGames() {
   const minRate = parseFloat(document.getElementById('minRate').value) || 0;
   const minRateCount = parseInt(document.getElementById('minRateCount').value) || 0;
   const maxPrice = parseFloat(document.getElementById('maxPrice').value);
+  const releasedOnly = document.getElementById('releasedOnly').checked;
 
   const filtered = games.filter(game =>
+    (!releasedOnly || game.isRealesed) &&
     game.rate >= minRate &&
     game.rateCount >= minRateCount &&
     (isNaN(maxPrice) || game.price <= maxPrice)
